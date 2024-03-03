@@ -15,6 +15,7 @@ NHANES_full <- rbind(C7, C8)
 ls(NHANES_full)
 #remove all subjects younger than 20 years of age
 NHANES_full = subset(NHANES_full, NHANES_full$`Age in years at screening` > 19)
+NHANES_full <- NHANES_full %>% mutate(surveyweight = 1/9 * WTMEC2YR)
 
 #Separating the data into a white training, white testing, and other race sets
 NHANES_split <- split(NHANES_full, f= NHANES_full$`Race/Hispanic Origin`)
@@ -130,8 +131,9 @@ trainwhite <- createDataPartition(NHANES_dmywhite$X.Doctor.told.you.have.diabete
 train <- NHANES_dmywhite[trainwhite,]
 test <- NHANES_dmywhite[-trainwhite,]
 output_vector <- train[ 'X.Doctor.told.you.have.diabetes.Yes'] == 1 
+weights <- train['surveyweight']
 train <-as.matrix(train)
-bst <- xgboost(data = train, label = output_vector, max_depth = 4,
+bst <- xgboost(data = train, label = output_vector, weight = weights, max_depth = 4,
                eta = 1, nthread = 2, nrounds = 10, objective = "binary:logistic")
 test <- as.matrix(test)
 test <- xgb.DMatrix(test)
