@@ -132,21 +132,27 @@ train <- NHANES_dmywhite[trainwhite,]
 test <- NHANES_dmywhite[-trainwhite,]
 output_vector <- train[ 'X.Doctor.told.you.have.diabetes.Yes'] == 1 
 weights <- train['surveyweight']
+weights <- as.double(unlist(weights))
+weights2 <- test['surveyweight']
+weights2 <- as.double(unlist(weights2))
 train <-as.matrix(train)
 bst <- xgboost(data = train, label = output_vector, weight = weights, max_depth = 4,
                eta = 1, nthread = 2, nrounds = 10, objective = "binary:logistic")
 test <- as.matrix(test)
 test <- xgb.DMatrix(test)
 nrow(test)
-pred <- predict(bst, test[1:4031 ,'X.Doctor.told.you.have.diabetes.Yes'])
+pred <- predict(bst, test[1:4031 ,'X.Doctor.told.you.have.diabetes.Yes'], weight = weights2)
 print(head(pred))
 prediction <- as.numeric(pred > 0.5)
 print(head(prediction))
 
+weights3 <- NHANES_dmyblack['surveyweight']
+weights3 <- as.double(unlist(weights3))
 btest <- as.matrix(NHANES_dmyblack)
 btest <- xgb.DMatrix(btest)
 nrow(btest)
-pred2 <- predict(bst, btest[1:9308 ,'X.Doctor.told.you.have.diabetes.Yes'])
+#does surveyweight need to be removed from the matrix when doing the boost and prediction?
+pred2 <- predict(bst, btest[1:9308 ,'X.Doctor.told.you.have.diabetes.Yes'], weight = weights3)
 print(head(pred2))
 prediction2 <- as.numeric(pred2 > 0.5)
 print(head(prediction2))
