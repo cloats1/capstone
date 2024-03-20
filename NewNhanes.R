@@ -8,6 +8,7 @@ library(Matrix)
 library(data.table)
 library(glmnet)
 library(pROC)
+library(tidymodels)
 
 DEMO_B <- nhanes('DEMO_B')
 ALQ_B <- nhanes('ALQ_B')
@@ -43,30 +44,10 @@ C6 <- left_join(C5, MCQ_B, by="SEQN")
 C8 <- left_join(C6, l13_b, by="SEQN")
 C9 <- left_join(C8, DRXTOT_B, by="SEQN")
 NHANES2001 <- left_join(C9, BPX_B, by="SEQN")
+xnhanes2001 <- NHANES2001
 
-NHANES2001 <- NHANES2001 %>% mutate(RIAGENDR=recode(RIAGENDR, "1" ='Male', "2" ='Female'))
-NHANES2001 <- NHANES2001 %>% mutate(RIDRETH1=recode(RIDRETH1, "1" ='Mexican American',
-                                                    "2" ='Other Hispanic', "3"="Non-Hispanic White",
-                                                    "4"='Non-Hispanic Black', '5'= 'Other Race - Including Multi-Racial'))
-NHANES2001 <- NHANES2001 %>% mutate(DMDEDUC2=recode(DMDEDUC2, '1'='Less than 9th grade',
-                                                    '2'='9-11th grade (Includes 12th grade with no diploma)',
-                                                    '3'='High school graduate/GED or equivalent',
-                                                    '4'='Some college or AA degree', '5'='College graduate or above',
-                                                    '7'='Refused', '9'='Do not know'))
-NHANES2001 <- NHANES2001 %>% mutate(INDHHINC=recode(INDHHINC, "1" ='$ 0 to $ 4,999',
-                                                    "2" ='$ 5,000 to $ 9,999', '3'='$10,000 to $14,999', '4'='$15,000 to $19,999',
-                                                    '5'='$20,000 to $24,999', '6'='$25,000 to $34,999', '7'='$35,000 to $44,999',
-                                                    '8'='$45,000 to $54,999', '9'='$55,000 to $64,999', '10'='$65,000 to $74,999',
-                                                    '11'='$75,000 and Over', '12'='$20,000 and Over', '13'='Under $20,000', 
-                                                    '77'='Refused', '99'='Do not know'))
-NHANES2001 <- NHANES2001 %>% mutate(BPQ020=recode(BPQ020, "1" ='Yes', "2" ='No', 
-                                                  '7'='Refused', "9"='Do not know'))
-NHANES2001 <- NHANES2001 %>% mutate(DIQ010=recode(DIQ010, "1" ='Yes', "2" ='No',
-                                                  '3'='Borderline', '7'='Refused',
-                                                  "9"="Do not know"))
-NHANES2001 <- NHANES2001 %>% mutate(MCQ250A=recode(MCQ250A, "1" ='Yes', "2" ='No',
-                                                  '7'='Refused',
-                                                  "9"="Do not know"))
+NHANES2001 <- NHANES2001 %>% mutate(INDHHINC=recode(INDHHINC, "$     0 to $ 4,999" ='$ 0 to $ 4,999'))
+
 NHANES2001 <- as_tibble(NHANES2001)
 lookup <- c("Gender"="RIAGENDR", "Age" ="RIDAGEYR", 
             "Race"= "RIDRETH1", 
@@ -115,30 +96,10 @@ C6 <- left_join(C5, MCQ_C, by="SEQN")
 C8 <- left_join(C6, l13_c, by="SEQN")
 C9 <- left_join(C8, DR1TOT_C, by="SEQN")
 NHANES2003 <- left_join(C9, BPX_C, by="SEQN")
+xnhanes2003 <- NHANES2003
 
-NHANES2003 <- NHANES2003 %>% mutate(RIAGENDR=recode(RIAGENDR, "1" ='Male', "2" ='Female'))
-NHANES2003 <- NHANES2003 %>% mutate(RIDRETH1=recode(RIDRETH1, "1" ='Mexican American',
-                                                    "2" ='Other Hispanic', "3"="Non-Hispanic White",
-                                                    "4"='Non-Hispanic Black', '5'= 'Other Race - Including Multi-Racial'))
-NHANES2003 <- NHANES2003 %>% mutate(DMDEDUC2=recode(DMDEDUC2, '1'='Less than 9th grade',
-                                                    '2'='9-11th grade (Includes 12th grade with no diploma)',
-                                                    '3'='High school graduate/GED or equivalent',
-                                                    '4'='Some college or AA degree', '5'='College graduate or above',
-                                                    '7'='Refused', '9'='Do not know'))
-NHANES2003 <- NHANES2003 %>% mutate(INDHHINC=recode(INDHHINC, "1" ='$ 0 to $ 4,999',
-                                                    "2" ='$ 5,000 to $ 9,999', '3'='$10,000 to $14,999', '4'='$15,000 to $19,999',
-                                                    '5'='$20,000 to $24,999', '6'='$25,000 to $34,999', '7'='$35,000 to $44,999',
-                                                    '8'='$45,000 to $54,999', '9'='$55,000 to $64,999', '10'='$65,000 to $74,999',
-                                                    '11'='$75,000 and Over', '12'='$20,000 and Over', '13'='Under $20,000', 
-                                                    '77'='Refused', '99'='Do not know'))
-NHANES2003 <- NHANES2003 %>% mutate(BPQ020=recode(BPQ020, "1" ='Yes', "2" ='No', 
-                                                  '7'='Refused', "9"='Do not know'))
-NHANES2003 <- NHANES2003 %>% mutate(DIQ010=recode(DIQ010, "1" ='Yes', "2" ='No',
-                                                  '3'='Borderline', '7'='Refused',
-                                                  "9"="Do not know"))
-NHANES2003 <- NHANES2003 %>% mutate(MCQ250A=recode(MCQ250A, "1" ='Yes', "2" ='No',
-                                                   '7'='Refused',
-                                                   "9"="Do not know"))
+NHANES2003 <- NHANES2003 %>% mutate(INDHHINC=recode(INDHHINC, "$     0 to $ 4,999" ='$ 0 to $ 4,999'))
+
 NHANES2003 <- as_tibble(NHANES2003)
 lookup <- c("Gender"="RIAGENDR", "Age" ="RIDAGEYR", 
             "Race"= "RIDRETH1", 
@@ -187,30 +148,10 @@ C6 <- left_join(C5, MCQ_D, by="SEQN")
 C8 <- left_join(C6, TCHOL_D, by="SEQN")
 C9 <- left_join(C8, DR1TOT_D, by="SEQN")
 NHANES2005 <- left_join(C9, BPX_D, by="SEQN")
+xnhanes2005 <- NHANES2005
 
-NHANES2005 <- NHANES2005 %>% mutate(RIAGENDR=recode(RIAGENDR, "1" ='Male', "2" ='Female'))
-NHANES2005 <- NHANES2005 %>% mutate(RIDRETH1=recode(RIDRETH1, "1" ='Mexican American',
-                                                    "2" ='Other Hispanic', "3"="Non-Hispanic White",
-                                                    "4"='Non-Hispanic Black', '5'= 'Other Race - Including Multi-Racial'))
-NHANES2005 <- NHANES2005 %>% mutate(DMDEDUC2=recode(DMDEDUC2, '1'='Less than 9th grade',
-                                                    '2'='9-11th grade (Includes 12th grade with no diploma)',
-                                                    '3'='High school graduate/GED or equivalent',
-                                                    '4'='Some college or AA degree', '5'='College graduate or above',
-                                                    '7'='Refused', '9'='Do not know'))
-NHANES2005 <- NHANES2005 %>% mutate(INDHHINC=recode(INDHHINC, "1" ='$ 0 to $ 4,999',
-                                                    "2" ='$ 5,000 to $ 9,999', '3'='$10,000 to $14,999', '4'='$15,000 to $19,999',
-                                                    '5'='$20,000 to $24,999', '6'='$25,000 to $34,999', '7'='$35,000 to $44,999',
-                                                    '8'='$45,000 to $54,999', '9'='$55,000 to $64,999', '10'='$65,000 to $74,999',
-                                                    '11'='$75,000 and Over', '12'='$20,000 and Over', '13'='Under $20,000', 
-                                                    '77'='Refused', '99'='Do not know'))
-NHANES2005 <- NHANES2005 %>% mutate(BPQ020=recode(BPQ020, "1" ='Yes', "2" ='No', 
-                                                  '7'='Refused', "9"='Do not know'))
-NHANES2005 <- NHANES2005 %>% mutate(DIQ010=recode(DIQ010, "1" ='Yes', "2" ='No',
-                                                  '3'='Borderline', '7'='Refused',
-                                                  "9"="Do not know"))
-NHANES2005 <- NHANES2005 %>% mutate(MCQ300C=recode(MCQ300C, "1" ='Yes', "2" ='No',
-                                                   '7'='Refused',
-                                                   "9"="Do not know"))
+NHANES2005 <- NHANES2005 %>% mutate(INDHHINC=recode(INDHHINC, "$     0 to $ 4,999" ='$ 0 to $ 4,999'))
+
 NHANES2005 <- as_tibble(NHANES2005)
 lookup <- c("Gender"="RIAGENDR", "Age" ="RIDAGEYR", 
             "Race"= "RIDRETH1", 
@@ -259,30 +200,12 @@ C6 <- left_join(C5, MCQ_E, by="SEQN")
 C8 <- left_join(C6, TCHOL_E, by="SEQN")
 C9 <- left_join(C8, DR1TOT_E, by="SEQN")
 NHANES2007 <- left_join(C9, BPX_E, by="SEQN")
+xnhanes2007 <- NHANES2007
 
-NHANES2007 <- NHANES2007 %>% mutate(RIAGENDR=recode(RIAGENDR, "1" ='Male', "2" ='Female'))
-NHANES2007 <- NHANES2007 %>% mutate(RIDRETH1=recode(RIDRETH1, "1" ='Mexican American',
-                                                    "2" ='Other Hispanic', "3"="Non-Hispanic White",
-                                                    "4"='Non-Hispanic Black', '5'= 'Other Race - Including Multi-Racial'))
-NHANES2007 <- NHANES2007 %>% mutate(DMDEDUC2=recode(DMDEDUC2, '1'='Less than 9th grade',
-                                                    '2'='9-11th grade (Includes 12th grade with no diploma)',
-                                                    '3'='High school graduate/GED or equivalent',
-                                                    '4'='Some college or AA degree', '5'='College graduate or above',
-                                                    '7'='Refused', '9'='Do not know'))
-NHANES2007 <- NHANES2007 %>% mutate(INDHHIN2=recode(INDHHIN2, "1" ='$ 0 to $ 4,999',
-                                                    "2" ='$ 5,000 to $ 9,999', '3'='$10,000 to $14,999', '4'='$15,000 to $19,999',
-                                                    '5'='$20,000 to $24,999', '6'='$25,000 to $34,999', '7'='$35,000 to $44,999',
-                                                    '8'='$45,000 to $54,999', '9'='$55,000 to $64,999', '10'='$65,000 to $74,999',
-                                                    '11'='$75,000 and Over', '12'='$20,000 and Over', '13'='Under $20,000', 
-                                                    '77'='Refused', '99'='Do not know'))
-NHANES2007 <- NHANES2007 %>% mutate(BPQ020=recode(BPQ020, "1" ='Yes', "2" ='No', 
-                                                  '7'='Refused', "9"='Do not know'))
-NHANES2007 <- NHANES2007 %>% mutate(DIQ010=recode(DIQ010, "1" ='Yes', "2" ='No',
-                                                  '3'='Borderline', '7'='Refused',
-                                                  "9"="Do not know"))
-NHANES2007 <- NHANES2007 %>% mutate(MCQ300C=recode(MCQ300C, "1" ='Yes', "2" ='No',
-                                                   '7'='Refused',
-                                                   "9"="Do not know"))
+NHANES2007 <- NHANES2007 %>% mutate(INDHHIN2=recode(INDHHIN2, "$     0 to $ 4,999" ='$ 0 to $ 4,999',
+                                                    '$75,000 to $99,999'='$75,000 and Over',
+                                                    '$100,000 and Over'='$75,000 and Over'))
+
 NHANES2007 <- as_tibble(NHANES2007)
 lookup <- c("Gender"="RIAGENDR", "Age" ="RIDAGEYR", 
             "Race"= "RIDRETH1", 
@@ -331,30 +254,12 @@ C6 <- left_join(C5, MCQ_F, by="SEQN")
 C8 <- left_join(C6, TCHOL_F, by="SEQN")
 C9 <- left_join(C8, DR1TOT_F, by="SEQN")
 NHANES2009 <- left_join(C9, BPX_F, by="SEQN")
+xnhanes2009 <- NHANES2009
 
-NHANES2009 <- NHANES2009 %>% mutate(RIAGENDR=recode(RIAGENDR, "1" ='Male', "2" ='Female'))
-NHANES2009 <- NHANES2009 %>% mutate(RIDRETH1=recode(RIDRETH1, "1" ='Mexican American',
-                                                    "2" ='Other Hispanic', "3"="Non-Hispanic White",
-                                                    "4"='Non-Hispanic Black', '5'= 'Other Race - Including Multi-Racial'))
-NHANES2009 <- NHANES2009 %>% mutate(DMDEDUC2=recode(DMDEDUC2, '1'='Less than 9th grade',
-                                                    '2'='9-11th grade (Includes 12th grade with no diploma)',
-                                                    '3'='High school graduate/GED or equivalent',
-                                                    '4'='Some college or AA degree', '5'='College graduate or above',
-                                                    '7'='Refused', '9'='Do not know'))
-NHANES2009 <- NHANES2009 %>% mutate(INDHHIN2=recode(INDHHIN2, "1" ='$ 0 to $ 4,999',
-                                                    "2" ='$ 5,000 to $ 9,999', '3'='$10,000 to $14,999', '4'='$15,000 to $19,999',
-                                                    '5'='$20,000 to $24,999', '6'='$25,000 to $34,999', '7'='$35,000 to $44,999',
-                                                    '8'='$45,000 to $54,999', '9'='$55,000 to $64,999', '10'='$65,000 to $74,999',
-                                                    '11'='$75,000 and Over', '12'='$20,000 and Over', '13'='Under $20,000', 
-                                                    '77'='Refused', '99'='Do not know'))
-NHANES2009 <- NHANES2009 %>% mutate(BPQ020=recode(BPQ020, "1" ='Yes', "2" ='No', 
-                                                  '7'='Refused', "9"='Do not know'))
-NHANES2009 <- NHANES2009 %>% mutate(DIQ010=recode(DIQ010, "1" ='Yes', "2" ='No',
-                                                  '3'='Borderline', '7'='Refused',
-                                                  "9"="Do not know"))
-NHANES2009 <- NHANES2009 %>% mutate(MCQ300C=recode(MCQ300C, "1" ='Yes', "2" ='No',
-                                                   '7'='Refused',
-                                                   "9"="Do not know"))
+NHANES2009 <- NHANES2009 %>% mutate(INDHHIN2=recode(INDHHIN2, "$     0 to $ 4,999" ='$ 0 to $ 4,999', 
+                                                    '$75,000 to $99,999'='$75,000 and Over', 
+                                                    '$100,000 and Over'='$75,000 and Over'))
+
 NHANES2009 <- as_tibble(NHANES2009)
 lookup <- c("Gender"="RIAGENDR", "Age" ="RIDAGEYR", 
             "Race"= "RIDRETH1", 
@@ -403,30 +308,18 @@ C6 <- left_join(C5, MCQ_G, by="SEQN")
 C8 <- left_join(C6, TCHOL_G, by="SEQN")
 C9 <- left_join(C8, DR1TOT_G, by="SEQN")
 NHANES2011 <- left_join(C9, BPX_G, by="SEQN")
+xnhanes2011 <- NHANES2011
 
-NHANES2011 <- NHANES2011 %>% mutate(RIAGENDR=recode(RIAGENDR, "1" ='Male', "2" ='Female'))
-NHANES2011 <- NHANES2011 %>% mutate(RIDRETH1=recode(RIDRETH1, "1" ='Mexican American',
-                                                    "2" ='Other Hispanic', "3"="Non-Hispanic White",
-                                                    "4"='Non-Hispanic Black', '5'= 'Other Race - Including Multi-Racial'))
-NHANES2011 <- NHANES2011 %>% mutate(DMDEDUC2=recode(DMDEDUC2, '1'='Less than 9th grade',
-                                                    '2'='9-11th grade (Includes 12th grade with no diploma)',
-                                                    '3'='High school graduate/GED or equivalent',
-                                                    '4'='Some college or AA degree', '5'='College graduate or above',
+
+NHANES2011 <- NHANES2011 %>% mutate(DMDEDUC2=recode(DMDEDUC2, 'Less than 9th grade'='Less Than 9th Grade',
+                                                    '9-11th grade (Includes 12th grade with no diploma)'='9-11th Grade (Includes 12th grade with no diploma)',
+                                                    'High school graduate/GED or equivalent'='High School Grad/GED or Equivalent',
+                                                    'Some college or AA degree'='Some College or AA degree', 
+                                                    'College graduate or above'='College Graduate or above',
                                                     '7'='Refused', '9'='Do not know'))
-NHANES2011 <- NHANES2011 %>% mutate(INDHHIN2=recode(INDHHIN2, "1" ='$ 0 to $ 4,999',
-                                                    "2" ='$ 5,000 to $ 9,999', '3'='$10,000 to $14,999', '4'='$15,000 to $19,999',
-                                                    '5'='$20,000 to $24,999', '6'='$25,000 to $34,999', '7'='$35,000 to $44,999',
-                                                    '8'='$45,000 to $54,999', '9'='$55,000 to $64,999', '10'='$65,000 to $74,999',
-                                                    '11'='$75,000 and Over', '12'='$20,000 and Over', '13'='Under $20,000', 
-                                                    '77'='Refused', '99'='Do not know'))
-NHANES2011 <- NHANES2011 %>% mutate(BPQ020=recode(BPQ020, "1" ='Yes', "2" ='No', 
-                                                  '7'='Refused', "9"='Do not know'))
-NHANES2011 <- NHANES2011 %>% mutate(DIQ010=recode(DIQ010, "1" ='Yes', "2" ='No',
-                                                  '3'='Borderline', '7'='Refused',
-                                                  "9"="Do not know"))
-NHANES2011 <- NHANES2011 %>% mutate(MCQ300C=recode(MCQ300C, "1" ='Yes', "2" ='No',
-                                                   '7'='Refused',
-                                                   "9"="Do not know"))
+NHANES2011 <- NHANES2011 %>% mutate(INDHHIN2=recode(INDHHIN2, '$75,000 to $99,999'='$75,000 and Over',
+                                                    '$100,000 and Over'='$75,000 and Over'))
+
 NHANES2011 <- as_tibble(NHANES2011)
 lookup <- c("Gender"="RIAGENDR", "Age" ="RIDAGEYR", 
             "Race"= "RIDRETH1", 
@@ -475,30 +368,18 @@ C6 <- left_join(C5, MCQ_H, by="SEQN")
 C8 <- left_join(C6, TCHOL_H, by="SEQN")
 C9 <- left_join(C8, DR1TOT_H, by="SEQN")
 NHANES2013 <- left_join(C9, BPX_H, by="SEQN")
+xnhanes2013 <- NHANES2013
 
-NHANES2013 <- NHANES2013 %>% mutate(RIAGENDR=recode(RIAGENDR, "1" ='Male', "2" ='Female'))
-NHANES2013 <- NHANES2013 %>% mutate(RIDRETH1=recode(RIDRETH1, "1" ='Mexican American',
-                                                    "2" ='Other Hispanic', "3"="Non-Hispanic White",
-                                                    "4"='Non-Hispanic Black', '5'= 'Other Race - Including Multi-Racial'))
-NHANES2013 <- NHANES2013 %>% mutate(DMDEDUC2=recode(DMDEDUC2, '1'='Less than 9th grade',
-                                                    '2'='9-11th grade (Includes 12th grade with no diploma)',
-                                                    '3'='High school graduate/GED or equivalent',
-                                                    '4'='Some college or AA degree', '5'='College graduate or above',
+
+NHANES2013 <- NHANES2013 %>% mutate(DMDEDUC2=recode(DMDEDUC2, 'Less than 9th grade'='Less Than 9th Grade',
+                                                    '9-11th grade (Includes 12th grade with no diploma)'='9-11th Grade (Includes 12th grade with no diploma)',
+                                                    'High school graduate/GED or equivalent'='High School Grad/GED or Equivalent',
+                                                    'Some college or AA degree'='Some College or AA degree', 
+                                                    'College graduate or above'='College Graduate or above',
                                                     '7'='Refused', '9'='Do not know'))
-NHANES2013 <- NHANES2013 %>% mutate(INDHHIN2=recode(INDHHIN2, "1" ='$ 0 to $ 4,999',
-                                                    "2" ='$ 5,000 to $ 9,999', '3'='$10,000 to $14,999', '4'='$15,000 to $19,999',
-                                                    '5'='$20,000 to $24,999', '6'='$25,000 to $34,999', '7'='$35,000 to $44,999',
-                                                    '8'='$45,000 to $54,999', '9'='$55,000 to $64,999', '10'='$65,000 to $74,999',
-                                                    '11'='$75,000 and Over', '12'='$20,000 and Over', '13'='Under $20,000', 
-                                                    '77'='Refused', '99'='Do not know'))
-NHANES2013 <- NHANES2013 %>% mutate(BPQ020=recode(BPQ020, "1" ='Yes', "2" ='No', 
-                                                  '7'='Refused', "9"='Do not know'))
-NHANES2013 <- NHANES2013 %>% mutate(DIQ010=recode(DIQ010, "1" ='Yes', "2" ='No',
-                                                  '3'='Borderline', '7'='Refused',
-                                                  "9"="Do not know"))
-NHANES2013 <- NHANES2013 %>% mutate(MCQ300C=recode(MCQ300C, "1" ='Yes', "2" ='No',
-                                                   '7'='Refused',
-                                                   "9"="Do not know"))
+NHANES2013 <- NHANES2013 %>% mutate(INDHHIN2=recode(INDHHIN2, '$75,000 to $99,999'='$75,000 and Over',
+                                                    '$100,000 and Over'='$75,000 and Over'))
+
 NHANES2013 <- as_tibble(NHANES2013)
 lookup <- c("Gender"="RIAGENDR", "Age" ="RIDAGEYR", 
             "Race"= "RIDRETH1", 
@@ -547,30 +428,18 @@ C6 <- left_join(C5, MCQ_I, by="SEQN")
 C8 <- left_join(C6, TCHOL_I, by="SEQN")
 C9 <- left_join(C8, DR1TOT_I, by="SEQN")
 NHANES2015 <- left_join(C9, BPX_I, by="SEQN")
+xnhanes2015 <- NHANES2015
 
-NHANES2015 <- NHANES2015 %>% mutate(RIAGENDR=recode(RIAGENDR, "1" ='Male', "2" ='Female'))
-NHANES2015 <- NHANES2015 %>% mutate(RIDRETH1=recode(RIDRETH1, "1" ='Mexican American',
-                                                    "2" ='Other Hispanic', "3"="Non-Hispanic White",
-                                                    "4"='Non-Hispanic Black', '5'= 'Other Race - Including Multi-Racial'))
-NHANES2015 <- NHANES2015 %>% mutate(DMDEDUC2=recode(DMDEDUC2, '1'='Less than 9th grade',
-                                                    '2'='9-11th grade (Includes 12th grade with no diploma)',
-                                                    '3'='High school graduate/GED or equivalent',
-                                                    '4'='Some college or AA degree', '5'='College graduate or above',
+
+NHANES2015 <- NHANES2015 %>% mutate(DMDEDUC2=recode(DMDEDUC2, 'Less than 9th grade'='Less Than 9th Grade',
+                                                    '9-11th grade (Includes 12th grade with no diploma)'='9-11th Grade (Includes 12th grade with no diploma)',
+                                                    'High school graduate/GED or equivalent'='High School Grad/GED or Equivalent',
+                                                    'Some college or AA degree'='Some College or AA degree', 
+                                                    'College graduate or above'='College Graduate or above',
                                                     '7'='Refused', '9'='Do not know'))
-NHANES2015 <- NHANES2015 %>% mutate(INDHHIN2=recode(INDHHIN2, "1" ='$ 0 to $ 4,999',
-                                                    "2" ='$ 5,000 to $ 9,999', '3'='$10,000 to $14,999', '4'='$15,000 to $19,999',
-                                                    '5'='$20,000 to $24,999', '6'='$25,000 to $34,999', '7'='$35,000 to $44,999',
-                                                    '8'='$45,000 to $54,999', '9'='$55,000 to $64,999', '10'='$65,000 to $74,999',
-                                                    '11'='$75,000 and Over', '12'='$20,000 and Over', '13'='Under $20,000', 
-                                                    '77'='Refused', '99'='Do not know'))
-NHANES2015 <- NHANES2015 %>% mutate(BPQ020=recode(BPQ020, "1" ='Yes', "2" ='No', 
-                                                  '7'='Refused', "9"='Do not know'))
-NHANES2015 <- NHANES2015 %>% mutate(DIQ010=recode(DIQ010, "1" ='Yes', "2" ='No',
-                                                  '3'='Borderline', '7'='Refused',
-                                                  "9"="Do not know"))
-NHANES2015 <- NHANES2015 %>% mutate(MCQ300C=recode(MCQ300C, "1" ='Yes', "2" ='No',
-                                                   '7'='Refused',
-                                                   "9"="Do not know"))
+NHANES2015 <- NHANES2015 %>% mutate(INDHHIN2=recode(INDHHIN2, '$75,000 to $99,999'='$75,000 and Over',
+                                                    '$100,000 and Over'='$75,000 and Over'))
+
 NHANES2015 <- as_tibble(NHANES2015)
 lookup <- c("Gender"="RIAGENDR", "Age" ="RIDAGEYR", 
             "Race"= "RIDRETH1", 
@@ -619,30 +488,18 @@ C6 <- left_join(C5, MCQ_J, by="SEQN")
 C8 <- left_join(C6, TCHOL_J, by="SEQN")
 C9 <- left_join(C8, DR1TOT_J, by="SEQN")
 NHANES2017 <- left_join(C9, BPX_J, by="SEQN")
+xnhanes2017 <- NHANES2017
 
-NHANES2017 <- NHANES2017 %>% mutate(RIAGENDR=recode(RIAGENDR, "1" ='Male', "2" ='Female'))
-NHANES2017 <- NHANES2017 %>% mutate(RIDRETH1=recode(RIDRETH1, "1" ='Mexican American',
-                                                    "2" ='Other Hispanic', "3"="Non-Hispanic White",
-                                                    "4"='Non-Hispanic Black', '5'= 'Other Race - Including Multi-Racial'))
-NHANES2017 <- NHANES2017 %>% mutate(DMDEDUC2=recode(DMDEDUC2, '1'='Less than 9th grade',
-                                                    '2'='9-11th grade (Includes 12th grade with no diploma)',
-                                                    '3'='High school graduate/GED or equivalent',
-                                                    '4'='Some college or AA degree', '5'='College graduate or above',
+
+NHANES2017 <- NHANES2017 %>% mutate(DMDEDUC2=recode(DMDEDUC2, 'Less than 9th grade'='Less Than 9th Grade',
+                                                    '9-11th grade (Includes 12th grade with no diploma)'='9-11th Grade (Includes 12th grade with no diploma)',
+                                                    'High school graduate/GED or equivalent'='High School Grad/GED or Equivalent',
+                                                    'Some college or AA degree'='Some College or AA degree', 
+                                                    'College graduate or above'='College Graduate or above',
                                                     '7'='Refused', '9'='Do not know'))
-NHANES2017 <- NHANES2017 %>% mutate(INDHHIN2=recode(INDHHIN2, "1" ='$ 0 to $ 4,999',
-                                                    "2" ='$ 5,000 to $ 9,999', '3'='$10,000 to $14,999', '4'='$15,000 to $19,999',
-                                                    '5'='$20,000 to $24,999', '6'='$25,000 to $34,999', '7'='$35,000 to $44,999',
-                                                    '8'='$45,000 to $54,999', '9'='$55,000 to $64,999', '10'='$65,000 to $74,999',
-                                                    '11'='$75,000 and Over', '12'='$20,000 and Over', '13'='Under $20,000', 
-                                                    '77'='Refused', '99'='Do not know'))
-NHANES2017 <- NHANES2017 %>% mutate(BPQ020=recode(BPQ020, "1" ='Yes', "2" ='No', 
-                                                  '7'='Refused', "9"='Do not know'))
-NHANES2017 <- NHANES2017 %>% mutate(DIQ010=recode(DIQ010, "1" ='Yes', "2" ='No',
-                                                  '3'='Borderline', '7'='Refused',
-                                                  "9"="Do not know"))
-NHANES2017 <- NHANES2017 %>% mutate(MCQ300C=recode(MCQ300C, "1" ='Yes', "2" ='No',
-                                                   '7'='Refused',
-                                                   "9"="Do not know"))
+NHANES2017 <- NHANES2017 %>% mutate(INDHHIN2=recode(INDHHIN2, '$75,000 to $99,999'='$75,000 and Over',
+                                                    '$100,000 and Over'='$75,000 and Over'))
+
 NHANES2017 <- as_tibble(NHANES2017)
 lookup <- c("Gender"="RIAGENDR", "Age" ="RIDAGEYR", 
             "Race"= "RIDRETH1", 
@@ -683,22 +540,36 @@ gdmy <- dummyVars(" ~ .", data = gx)
 NHANES_dummy <- data.frame(predict(gdmy, newdata = gx))
 dummy <- NHANES_dummy  %>% drop_na(Diabetes.Yes)
 head(dummy)
-ncol(dummy) 45-48
-
+ncol(dummy)
 #removing all other instances of doctor told you have diabetes beyond the yes
 #column, X.Doctor.told.you.have.diabetes.Yes is a binary and should be all I need
-dummy= dummy[, -45:-48]
+dummy= dummy[, -37:-40]
 head(dummy)
+# 2 ref, 4-8 race, 15 ref, 27-28 cut, 30 ref, 31 cut (income), 35 ref, 48 ref, 
+#Removing FamilyHistory.Don.t.know as reference category for family history of diabetes
+dummy= dummy[, -48]
+#Removing HPB.Don.t.know as reference category for high blood pressure
+dummy= dummy[, -35]
+#Removing Income. . 20.000.and.0ver as uneeded column covered by other columns
+dummy= dummy [, -31]
+#removing Income.Don.t.know as reference category for income
+dummy= dummy [,-30]
+#Removing Income over/under 20,000
+dummy= dummy[, -27:-28]
+#Removing Education.Don.t.Know as reference category
+dummy= dummy[, -15]
+#Removing female as reference category for gender
+dummy= dummy[,-2]
 dummy$Race.Non.Hispanic.White
 NHANES_dmywhite <- dummy[dummy[, "Race.Non.Hispanic.White"] == 1,]
 head(NHANES_dmywhite)
 NHANES_dmyblack <- dummy[dummy[, "Race.Non.Hispanic.Black"] == 1,]
 head(NHANES_dmyblack)
 #removing other racial categories from black subset
-NHANES_dmyblack= NHANES_dmyblack[, -4:-8]
+NHANES_dmyblack= NHANES_dmyblack[, -3:-7]
 head(NHANES_dmyblack)
 #removing other racial categories from white subset
-NHANES_dmywhite= NHANES_dmywhite[, -4:-8]
+NHANES_dmywhite= NHANES_dmywhite[, -3:-7]
 head(NHANES_dmywhite)
 ncol(NHANES_dmywhite)
 ncol(NHANES_dmyblack)
@@ -714,9 +585,9 @@ weights2 <- test['surveyweight']
 weights2 <- as.double(unlist(weights2))
 
 #removing survey weights
-train = train[, -62]
+train = train[, -46]
 #removing Y column
-train2= train[, -39]
+train2= train[, -24]
 train2 <- as.matrix(train2)
 bsty <- xgboost(data = train2, label = output_vector, weight = weights, max_depth = 4,
                 eta = 1, nthread = 2, nrounds = 10, objective = "binary:logistic")
@@ -724,9 +595,9 @@ importance <- xgb.importance(feature_names = colnames(train2), model = bsty)
 head(importance)
 
 #removing survey weights from test set
-test2 = test2[, -62]
+test2 = test2[, -46]
 #removing Y column from test set
-test3= test2[, -39]
+test3= test2[, -24]
 test3 <- as.matrix(test3)
 predy <- predict(bsty, test3)
 print(head(predy))
@@ -740,9 +611,9 @@ weights3 <- NHANES_dmyblack['surveyweight']
 weights3 <- as.double(unlist(weights3))
 
 #removing survey weights from Black set
-btest= NHANES_dmyblack[,-62]
+btest= NHANES_dmyblack[,-46]
 #removing Y column from Black set
-btest= btest[,-39]
+btest= btest[,-24]
 btest <- as.matrix(btest)
 btest <- xgb.DMatrix(btest)
 nrow(btest)
@@ -759,8 +630,8 @@ mean(predictionB)
 
 ctrain <- NHANES_dmywhite[trainwhite,]
 ctest <- NHANES_dmywhite[-trainwhite,]
-ctrain = ctrain[, -62]
-ctest = ctest[, -62]
+ctrain = ctrain[, -46]
+ctest = ctest[, -46]
 output_vector <- train[ 'Diabetes.Yes'] == 1 
 
 dtrain <- xgb.DMatrix(data = as.matrix(select(ctrain, -Diabetes.Yes))
@@ -769,9 +640,11 @@ dtest <- xgb.DMatrix(data = as.matrix(select(ctest, -Diabetes.Yes)),
                      label = ctest$Diabetes.Yes)
 params <- list(booster = "gbtree", objective = "binary:logistic", eta=0.3,
                gamma=0, max_depth=20, min_child_weight=1, subsample=1, colsample_bytree=1)
+params <- list(booster = "gbtree", objective = "binary:logistic", eta=0.3,
+               gamma=10, max_depth=20, min_child_weight=1, subsample=1, colsample_bytree=1)
 xgbcv <- xgb.cv( params = params, data = dtrain, nrounds = 1000, nfold = 10, showsd = T,
                  stratified = T, print_every_n = 10, early_stopping_round = 20, maximize = F)
-xgb1 <- xgb.train (params = params, data = dtrain, nrounds = 11, watchlist = 
+xgb1 <- xgb.train (params = params, data = dtrain, nrounds = 13, watchlist = 
                      list(val=dtest,train=dtrain), print_ever_n = 10, early_stopping_round = 10,
                    maximize = F , eval_metric = "error")
 
@@ -810,10 +683,10 @@ ggroc(sim_roc, legacy.axes = TRUE) +
 
 #More complex cross validation
 paramDF <- expand.grid(
-  max_depth = seq(15, 29, by = 2),
+  max_depth = seq(14, 60, by = 2),
   max_leaves = c(63, 127, 255, 511, 1023, 2047, 4095),
   eta = 0.1)
-
+paramList <- lapply(split(paramDF, 1:nrow(paramDF)), as.list)
 bestResults <- tibble()
 pb <- txtProgressBar(style = 3)
 for(i in seq(length(paramList))) {
@@ -832,13 +705,13 @@ close(pb)
 
 depth_leaves <- bind_cols(paramDF, bestResults)
 View(depth_leaves)
-#depth 29, leaves 2047, eta 0.1
+#depth 58, leaves 63, eta 0.1
 diabetestested <- xgb.train(data = dtrain, verbose = 0,
                             watchlist = list(train = dtrain, test = dtest), 
                             nrounds = 10000,
                             early_stopping_rounds = 50,
-                            max_depth = 29,
-                            max_leaves = 2047,
+                            max_depth = 58,
+                            max_leaves = 63,
                             subsample = 0.8,
                             colsample_bytree = 0.7,
                             eta = 0.05)
@@ -862,33 +735,10 @@ auc(ctest$Diabetes.Yes, xgbpred)
 auc(ctest$Diabetes.Yes, xgbpred2)
 auc(ctest$Diabetes.Yes, xgbpred1)
 
-bstx <- xgboost(data = train2, label = output_vector, weight = weights, max_depth = 29, 
-                max_leaves = 2047, eta = 0.01, nthread = 4, nrounds = 1000, 
-                objective = "binary:logistic")
-
-predx <- predict(bstx, test3)
-print(head(predx))
-predictionx <- as.numeric(predx > 0.5)
-print(head(predictionx))
-mean(test2$Diabetes.Yes)
-mean(predictionx)
-auc(test2$Diabetes.Yes, predictionx)
-
-bstv <- xgboost(data = train2, label = output_vector, weight = weights, max_depth = 50, 
-                max_leaves = 5000, eta = 0.01, nthread = 4, nrounds = 1000, 
-                objective = "binary:logistic")
-
-predv <- predict(bstv, test3)
-print(head(predv))
-predictionv <- as.numeric(predv > 0.5)
-print(head(predictionv))
-mean(test2$Diabetes.Yes)
-mean(predictionv)
-auc(test2$Diabetes.Yes, predictionv)
 
 bstw <- xgboost(data = train2, label = output_vector, weight = weights, max_depth = 50, 
                 max_leaves = 5000, eta = 0.001, nthread = 4, nrounds = 3000, 
-                objective = "binary:logistic")
+                objective = "binary:logistic", eval_metric = "error")
 
 predw <- predict(bstw, test3)
 print(head(predw))
@@ -897,30 +747,8 @@ print(head(predictionw))
 mean(test2$Diabetes.Yes)
 mean(predictionw)
 auc(test2$Diabetes.Yes, predictionw)
+#AUC = 0.6079777
 
-bstu <- xgboost(data = train2, label = output_vector, weight = weights, max_depth = 100, 
-                max_leaves = 5000, eta = 0.001, nthread = 4, nrounds = 3000, 
-                objective = "binary:logistic")
-
-predu <- predict(bstu, test3)
-print(head(predu))
-predictionu <- as.numeric(predu > 0.5)
-print(head(predictionu))
-mean(test2$Diabetes.Yes)
-mean(predictionu)
-auc(test2$Diabetes.Yes, predictionu)
-
-bstt <- xgboost(data = train2, label = output_vector, weight = weights, max_depth = 100, 
-                max_leaves = 10000, eta = 0.001, nthread = 4, nrounds = 3000, 
-                objective = "binary:logistic")
-
-predt <- predict(bstt, test3)
-print(head(predt))
-predictiont <- as.numeric(predt > 0.5)
-print(head(predictiont))
-mean(test2$Diabetes.Yes)
-mean(predictiont)
-auc(test2$Diabetes.Yes, predictiont)
 
 #Running the training data back thru the model to confirm that the AUC function
 #works as intended
@@ -937,57 +765,76 @@ mean(predictionauc)
 auc(train$Diabetes.Yes, predictionauc)
 #AUC of 0.9758053
 
-bstr <- xgboost(data = train2, label = output_vector, weight = weights, max_depth = 200, 
-                max_leaves = 10000, eta = 0.001, nthread = 4, nrounds = 3000, 
-                objective = "binary:logistic")
-
-predr <- predict(bstr, test3)
-print(head(predr))
-predictionr <- as.numeric(predr > 0.5)
-print(head(predictionr))
-mean(test2$Diabetes.Yes)
-mean(predictionr)
-auc(test2$Diabetes.Yes, predictionr)
-
-bstq <- xgboost(data = train2, label = output_vector, weight = weights, max_depth = 400, 
-                max_leaves = 10000, eta = 0.001, nthread = 4, nrounds = 3000, 
-                objective = "binary:logistic")
-
-predq <- predict(bstq, test3)
-print(head(predq))
-predictionq <- as.numeric(predq > 0.5)
-print(head(predictionq))
-mean(test2$Diabetes.Yes)
-mean(predictionq)
-auc(test2$Diabetes.Yes, predictionq)
-
-score =accuracy(test2$Diabetes.Yes, predictionr)
-accuracy(test2$Diabetes.Yes, predictiont)
-accuracy(test2$Diabetes.Yes, predictionu)
 accuracy(test2$Diabetes.Yes, predictionw)
-accuracy(test2$Diabetes.Yes, predictionv)
-accuracy(test2$Diabetes.Yes, predictionx)
-accuracy(test2$Diabetes.Yes, predictiony)
-accuracy(test2$Diabetes.Yes, predictionq)
-print(score)
 
 mean(test2$Diabetes.Yes)
-mean(predictionq)
-mean(predictiony)
-mean(predictionx)
-mean(predictionv)
 mean(predictionw)
-mean(predictionu)
-mean(predictiont)
 
-bsta <- xgboost(data = train2, label = output_vector, weight = weights, max_depth = 50, 
-                max_leaves = 5000, eta = 0.0001, nthread = 4, nrounds = 20000, 
-                objective = "binary:logistic")
+#Logistic Regression model
+# Train a logistic regression model using tidymodel package
+train3 <- as.data.frame(train)
+train3$Diabetes.Yes <- as.factor(train3$Diabetes.Yes)
+model <- logistic_reg(mixture = double(1), penalty = double(1)) %>%
+  set_engine("glmnet") %>%
+  set_mode("classification") %>%
+  fit(Diabetes.Yes ~ ., data = train3)
 
-preda <- predict(bsta, test3)
-print(head(preda))
-predictiona <- as.numeric(preda > 0.5)
-print(head(predictiona))
-mean(test2$Diabetes.Yes)
-mean(predictiona)
-auc(test2$Diabetes.Yes, predictiona)
+# Model summary
+tidy(model)
+
+#Should I be using test data that has the Y column for this form of logistic
+#regression?
+test4 <- as.data.frame(test3)
+# Class Predictions
+pred_class <- predict(model,
+                      new_data = test4,
+                      type = "class")
+
+# Class Probabilities
+pred_proba <- predict(model,
+                      new_data = test4,
+                      type = "prob")
+
+results <- test4 %>%
+  select(Diabetes.Yes) %>%
+  bind_cols(pred_class, pred_proba)
+results$Diabetes.Yes <- as.factor(results$Diabetes.Yes)
+accuracy(results, truth = Diabetes.Yes, estimate = .pred_class)
+
+#Using default glm in r
+logistic <- glm(Diabetes.Yes ~ ., data = train, family = "binomial",
+                na.action = na.exclude)
+#look into other methods of dealing with NAs 
+#Excluding unneeded columns from dummy variable expansion
+#Need to look at my variables in general and possibly refactor again
+head(train)
+trainL = train[, -51]
+trainL = trainL[, -38]
+trainL = trainL[, -34]
+trainL = trainL[, -15]
+trainL = trainL[, -9]
+trainL = trainL[, -2]
+logistic <- glm(Diabetes.Yes ~ ., data = trainL, family = "binomial",
+                na.action = na.exclude)
+summary(logistic)
+
+importances <- varImp(logistic)
+
+importances %>%
+  arrange(desc(Overall)) %>%
+  top_n(20)
+
+probs <- predict(logistic, newdata = test, type = "response")
+predL <- ifelse(probs > 0.5, 1, 0)
+head(probs)
+head(predL)
+#large amounts of NA values, need to address
+confusionMatrix(factor(predL), factor(test$Diabetes.Yes), positive = as.character(1))
+mean(na.exclude(predL))
+mean(test$Diabetes.Yes)
+auc(test$Diabetes.Yes, predL)
+
+edu <- unique(unlist(strsplit(as.character(NHANES_full$Education), ",")))
+print(edu)
+inc <- unique(unlist(strsplit(as.character(NHANES_full$Income), ",")))
+print(inc)
