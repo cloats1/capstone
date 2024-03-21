@@ -535,32 +535,40 @@ gx[, SEQN := NULL]
 gx[, WTMEC2YR := NULL]
 head(gx)
 
+gxt <- gx %>% mutate(Education=recode(Education, "Less Than 9th Grade" = 1,
+                                        "9-11th Grade (Includes 12th grade with no diploma)" =2,
+                                      "High School Grad/GED or Equivalent" =3, 
+                                      "Some College or AA degree" =4, "College Graduate or above"=5,
+                                      "Refused"= 0, "Don't Know"=0))
+gxt <- gxt %>% mutate(Income=recode(Income, "$ 0 to $ 4,999"=1, "$ 5,000 to $ 9,999"=2,
+                                    "$10,000 to $14,999"=3, "$15,000 to $19,999"=4,
+                                    "$20,000 to $24,999"=5, "$25,000 to $34,999"=6,
+                                    "$35,000 to $44,999"=7, "$45,000 to $54,999"=8,
+                                    "$55,000 to $64,999"=9, "$65,000 to $74,999"=10,
+                                    "$75,000 and Over"=11, "Over $20,000"=0, "Under $20,000"=0,
+                                    "Refused"=0, "Don't know"=0, "$20,000 and Over"=0))
+gx <- gxt
+
 #creating dummy variables for the categorical variables
 gdmy <- dummyVars(" ~ .", data = gx)
 NHANES_dummy <- data.frame(predict(gdmy, newdata = gx))
 dummy <- NHANES_dummy  %>% drop_na(Diabetes.Yes)
 head(dummy)
 ncol(dummy)
+
+#Removing FamilyHistory.Don.t.know as reference category for family history of diabetes
+dummy= dummy[,-31]
 #removing all other instances of doctor told you have diabetes beyond the yes
 #column, X.Doctor.told.you.have.diabetes.Yes is a binary and should be all I need
-dummy= dummy[, -37:-40]
-head(dummy)
-# 2 ref, 4-8 race, 15 ref, 27-28 cut, 30 ref, 31 cut (income), 35 ref, 48 ref, 
-#Removing FamilyHistory.Don.t.know as reference category for family history of diabetes
-dummy= dummy[, -48]
+dummy= dummy[, -16:-19]
 #Removing HPB.Don.t.know as reference category for high blood pressure
-dummy= dummy[, -35]
-#Removing Income. . 20.000.and.0ver as uneeded column covered by other columns
-dummy= dummy [, -31]
-#removing Income.Don.t.know as reference category for income
-dummy= dummy [,-30]
-#Removing Income over/under 20,000
-dummy= dummy[, -27:-28]
-#Removing Education.Don.t.Know as reference category
-dummy= dummy[, -15]
+dummy= dummy[, -14]
 #Removing female as reference category for gender
 dummy= dummy[,-2]
+head(dummy)
+ncol(dummy)
 dummy$Race.Non.Hispanic.White
+
 NHANES_dmywhite <- dummy[dummy[, "Race.Non.Hispanic.White"] == 1,]
 head(NHANES_dmywhite)
 NHANES_dmyblack <- dummy[dummy[, "Race.Non.Hispanic.Black"] == 1,]
@@ -585,9 +593,9 @@ weights2 <- test['surveyweight']
 weights2 <- as.double(unlist(weights2))
 
 #removing survey weights
-train = train[, -46]
+train = train[, -30]
 #removing Y column
-train2= train[, -24]
+train2= train[, -8]
 train2 <- as.matrix(train2)
 bsty <- xgboost(data = train2, label = output_vector, weight = weights, max_depth = 4,
                 eta = 1, nthread = 2, nrounds = 10, objective = "binary:logistic")
@@ -595,9 +603,9 @@ importance <- xgb.importance(feature_names = colnames(train2), model = bsty)
 head(importance)
 
 #removing survey weights from test set
-test2 = test2[, -46]
+test2 = test2[, -30]
 #removing Y column from test set
-test3= test2[, -24]
+test3= test2[, -8]
 test3 <- as.matrix(test3)
 predy <- predict(bsty, test3)
 print(head(predy))
@@ -611,9 +619,9 @@ weights3 <- NHANES_dmyblack['surveyweight']
 weights3 <- as.double(unlist(weights3))
 
 #removing survey weights from Black set
-btest= NHANES_dmyblack[,-46]
+btest= NHANES_dmyblack[,-30]
 #removing Y column from Black set
-btest= btest[,-24]
+btest= btest[,-8]
 btest <- as.matrix(btest)
 btest <- xgb.DMatrix(btest)
 nrow(btest)
@@ -630,8 +638,8 @@ mean(predictionB)
 
 ctrain <- NHANES_dmywhite[trainwhite,]
 ctest <- NHANES_dmywhite[-trainwhite,]
-ctrain = ctrain[, -46]
-ctest = ctest[, -46]
+ctrain = ctrain[, -30]
+ctest = ctest[, -30]
 output_vector <- train[ 'Diabetes.Yes'] == 1 
 
 dtrain <- xgb.DMatrix(data = as.matrix(select(ctrain, -Diabetes.Yes))
@@ -738,7 +746,7 @@ auc(ctest$Diabetes.Yes, xgbpred1)
 
 bstw <- xgboost(data = train2, label = output_vector, weight = weights, max_depth = 50, 
                 max_leaves = 5000, eta = 0.001, nthread = 4, nrounds = 3000, 
-                objective = "binary:logistic", eval_metric = "error")
+                objective = "binary:logistic")
 
 predw <- predict(bstw, test3)
 print(head(predw))
@@ -807,15 +815,6 @@ logistic <- glm(Diabetes.Yes ~ ., data = train, family = "binomial",
 #look into other methods of dealing with NAs 
 #Excluding unneeded columns from dummy variable expansion
 #Need to look at my variables in general and possibly refactor again
-head(train)
-trainL = train[, -51]
-trainL = trainL[, -38]
-trainL = trainL[, -34]
-trainL = trainL[, -15]
-trainL = trainL[, -9]
-trainL = trainL[, -2]
-logistic <- glm(Diabetes.Yes ~ ., data = trainL, family = "binomial",
-                na.action = na.exclude)
 summary(logistic)
 
 importances <- varImp(logistic)
@@ -838,3 +837,13 @@ edu <- unique(unlist(strsplit(as.character(NHANES_full$Education), ",")))
 print(edu)
 inc <- unique(unlist(strsplit(as.character(NHANES_full$Income), ",")))
 print(inc)
+
+nope <- xgboost(data = train2, label = output_vector, weight = weights, nrounds= 10,
+                objective = "binary:logistic", eval_metric = "error")
+predn <- predict(nope, test3)
+print(head(predn))
+predictionn <- as.numeric(predn > 0.5)
+print(head(predictionn))
+mean(test2$Diabetes.Yes)
+mean(predictionn)
+auc(test2$Diabetes.Yes, predictionn)
