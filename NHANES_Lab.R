@@ -577,6 +577,7 @@ test2 <- NHANES_dmywhite[-trainwhite,]
 output_vector <- train[ 'Diabetes'] == 1 
 weights <- train['surveyweight']
 weights <- as.double(unlist(weights))
+surveyweights <- weights
 weights2 <- test['surveyweight']
 weights2 <- as.double(unlist(weights2))
 
@@ -766,8 +767,24 @@ mean(predictione)
 auc(test2$Diabetes, predictione)
 #AUC= 0.719303
 
+#prepping data for logisitic regression
+trainL <- NHANES_dmywhite[trainwhite,]
+testL <- NHANES_dmywhite[-trainwhite,]
+testL2 <- NHANES_dmywhite[-trainwhite,]
+trainL <- trainL %>% replace(is.na(.), 0)
+testL <- testL %>% replace(is.na(.), 0)
+output_vector <- trainL[ 'Diabetes'] == 1 
+weights <- train['surveyweight']
+weights <- as.double(unlist(weights))
+surveyweights <- weights
+weights2 <- test['surveyweight']
+weights2 <- as.double(unlist(weights2))
+
+trainL = trainL[, -29]
+testL = testL[,-29]
+
 #Using default glm in r
-logistic <- glm(Diabetes ~ ., data = ctrain, family = "binomial")
+logistic <- glm(Diabetes ~ ., data = trainL, family = "binomial")
 #look into other methods of dealing with NAs 
 #Excluding unneeded columns from dummy variable expansion
 #Need to look at my variables in general and possibly refactor again
@@ -779,12 +796,14 @@ importances %>%
   arrange(desc(Overall)) %>%
   top_n(20)
 
-probs <- predict(logistic, newdata = ctest, type = "response")
+probs <- predict(logistic, newdata = testL, type = "response")
 predL <- ifelse(probs > 0.5, 1, 0)
 head(probs)
 head(predL)
 #large amounts of NA values, need to address
 confusionMatrix(factor(predL), factor(test$Diabetes.Yes), positive = as.character(1))
-mean(na.exclude(predL))
-mean(ctest$Diabetes)
-auc(ctest$Diabetes, predL)
+mean(predL)
+mean(testL$Diabetes)
+auc(testL$Diabetes, predL)
+#true mean= 0.2523364, predicted mean= 0.1900312, AUC= 0.7017876
+#inclusion of weights drops AUC to 0.5 and mean 0.014
