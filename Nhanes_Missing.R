@@ -626,3 +626,61 @@ q<-freq(gx$Systolic)
 tail(q)
 r<-freq(gx$Diastolic)
 tail(r)
+
+nrow(NHANES_full)
+NHANES_fullA <- NHANES_full
+NHANES_fullA$Smoking <-  NHANES_fullA$Smoking %>% replace(is.na(.), 0)
+NHANES_fullA$Alcohol <-  NHANES_fullA$Alcohol %>% replace(is.na(.), 0)
+gx <- NHANES_fullA
+
+gxt <- gx %>% mutate(Education=recode(Education, "Less Than 9th Grade" = 1,
+                                      "9-11th Grade (Includes 12th grade with no diploma)" =2,
+                                      "High School Grad/GED or Equivalent" =3, 
+                                      "Some College or AA degree" =4, "College Graduate or above"=5,
+                                      "Refused"= 0, "Don't Know"=0))
+gxt <- gxt %>% mutate(Income=recode(Income, "$ 0 to $ 4,999"=1, "$ 5,000 to $ 9,999"=2,
+                                    "$10,000 to $14,999"=3, "$15,000 to $19,999"=4,
+                                    "$20,000 to $24,999"=5, "$25,000 to $34,999"=6,
+                                    "$35,000 to $44,999"=7, "$45,000 to $54,999"=8,
+                                    "$55,000 to $64,999"=9, "$65,000 to $74,999"=10,
+                                    "$75,000 and Over"=11, "Over $20,000"=0, "Under $20,000"=0,
+                                    "Refused"=0, "Don't know"=0, "$20,000 and Over"=0))
+gx <- gxt
+
+gdmy <- dummyVars(" ~ .", data = gx)
+NHANES_dummy <- data.frame(predict(gdmy, newdata = gx))
+dummy <- NHANES_dummy
+head(dummy)
+#1, 3, 12, 13-20, 21, 22, 26, 28-31, 
+#Removing FamilyHistory.Don.t.know as reference category for family history of diabetes
+dummy= dummy[,-42:-43]
+#removing all other instances of doctor told you have diabetes beyond the yes
+#column, X.Doctor.told.you.have.diabetes.Yes is a binary and should be all I need
+dummy= dummy[, -28:-31]
+#Removing HPB.Don.t.know as reference category for high blood pressure
+dummy= dummy[, -26]
+#Removing WTMEC2YR, Year, PSU, Stratum
+dummy = dummy[,-12:-22]
+#Removing female as reference category for gender
+dummy= dummy[,-3]
+#Removing SEQN
+dummy = dummy[,-1]
+head(dummy)
+ncol(dummy)
+
+
+dummy$Q <- ifelse(dummy$Diabetes >= "Yes", 1,0)
+dummy$Q
+dummy$Diabetes.Yes
+dummy$Z <- ifelse(dummy$BloodGlucose >=126, 1, 0)
+dummy$Z
+dummy$Diabetes <- ifelse(dummy$Q>=1 | dummy$Z>=1, 1, 0)
+
+dummy= dummy[, -36:-37]
+dummy= dummy[, -24]
+dummy= dummy[, -13]
+dummy <- dummy %>% drop_na(Diabetes)
+head(dummy)
+nrow(dummy)
+dummy2 <- drop_na(dummy)
+nrow(dummy2)
