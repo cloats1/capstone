@@ -679,8 +679,12 @@ dummy$Diabetes <- ifelse(dummy$Q>=1 | dummy$Z>=1, 1, 0)
 dummy= dummy[, -36:-37]
 dummy= dummy[, -24]
 dummy= dummy[, -13]
-dummy <- dummy %>% drop_na(Diabetes)
-head(dummy)
+
+dummyA <- dummy %>% drop_na(Diabetes)
+head(dummyA)
+nrow(dummyA)
 nrow(dummy)
 dummy2 <- drop_na(dummy)
+dummy3 <- drop_na(dummyA)
 nrow(dummy2)
+nrow(dummy3)
