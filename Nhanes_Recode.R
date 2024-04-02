@@ -612,6 +612,7 @@ gxt <- gxt %>% mutate(Income=recode(Income, "$ 0 to $ 4,999"=1, "$ 5,000 to $ 9,
 
 gdmy <- dummyVars(" ~ .", data = gxt)
 NHANES_dummy <- data.frame(predict(gdmy, newdata = gxt))
+
 dummy <- NHANES_dummy
 head(dummy)
 
@@ -630,16 +631,28 @@ dummy= dummy[,-22:-23]
 dummy = dummy[,-11:-20]
 #Removing female as reference category for gender
 dummy= dummy[,-2]
-head(dummy)
+head(dummy); dim(dummy)
 ncol(dummy)
 
-dummy$Q <- ifelse(dummy$Diabetes >= "Yes", 1,0)
+dummy$Q <- ifelse(dummy$Diabetes.Yes >= 1, 1,0)
 dummy$Q
 dummy$Diabetes.Yes
 dummy$Z <- ifelse(dummy$BloodGlucose >=126, 1, 0)
 dummy$Z
+
 dummy$Diabetes <- ifelse(dummy$Q>=1 | dummy$Z>=1, 1, 0)
-head(dummy)
+
+# add diabetics values of Z when Q is NA
+id.naQ = which(is.na(dummy$Q)&dummy$Z>=0)
+dummy$Diabetes[id.naQ]=dummy$Z[id.naQ]
+#table(dummy$Diabetes)
+
+# id.Z.1 = which(dummy$Z>0)
+# dummy[id.naQ,"Diabetes"]=dummy[id.naQ,"Z"]
+# dummy[id.Z.1,"Diabetes"]=dummy[id.Z.1,"Z"]
+
+head(dummy);tail(dummy)
+
 ncol(dummy)
 dummy$Diabetes
 #removing Q and Z temp columns
@@ -687,231 +700,42 @@ surveyweights <- weights
 weights2 <- test['surveyweight']
 weights2 <- as.double(unlist(weights2))
 
-#removing surveyweight column
-train = train[, -29]
+#removing surveyweight column 
+#####################column 26 is the variable of survey weight, not 29
+train = train[,-26] #train[, -29]
 #removing Y column for XGBoost
-train2= train[, -29]
+train2= train[, -26]
 train2 <- as.matrix(train2)
 
 #removing surveyweight column
-test2= test2[,-29]
+test2= test2[,-26]
 #Removing Y Column
-test3= test2[,-29]
+test3= test2[,-26]
 test3 <- as.matrix(test3)
 
-#Using default glm in r
-logistic <- glm(Diabetes ~ ., data = train, family = "binomial")
-#attempting to use weights gives errors: 1: In eval(family$initialize) : non-integer #successes 
-#in a binomial glm! 2: glm.fit: algorithm did not converge
-#3: glm.fit: fitted probabilities numerically 0 or 1 occurred 
-logistic2 <- glm(Diabetes ~ ., data = train, family = "binomial", weights = surveyweights)
 
-summary(logistic)
+##############-survey weighted logistic analysis
+dsgn.wt = svydesign(ids=~1,strata=NULL, weights = surveyweights,data=train)
+logistic2 <- svyglm(Diabetes ~ Gender.Male + Age + Education + Income + Alcohol.Yes + HBP.Yes + Smoking.Yes + Weight + Height + Waist + Leg + BMI + Arm + ArmCircumference + FamilyHistory.Yes + Cholesterol + KcalIntake + Sodium + Carb + Fiber + Calcium + Caffeine + Pulse + Systolic + Diastolic,
+                    family = quasibinomial(link = 'logit'), design = dsgn.wt)
 
-importances <- varImp(logistic)
+###################-Yan Li new codes for survey-wieghted logistic analysis 
+summary(logistic2)
 
-importances %>%
+importances2 <- varImp(logistic2)
+
+importances2 %>%
   arrange(desc(Overall)) %>%
   top_n(20)
 
-probs <- predict(logistic, newdata = test2, type = "response")
+probs <- predict(logistic2, newdata = test2, type = "response")
 predL <- ifelse(probs > 0.5, 1, 0)
 head(probs)
 head(predL)
 #produces error: the data cannot have more levels than the reference
-confusionMatrix(factor(predL), factor(test2$Diabetes.Yes), positive = as.character(1))
+confusionMatrix(factor(predL), factor(test2$Diabetes), positive = as.character(1))
 mean(predL)
 mean(test2$Diabetes)
 auc(test2$Diabetes, predL)
 nrow(test2)
 length(predL)
-
-#Creating dataset for Survey Logistic that keeps SEQN as required by survey procedures
-gxS <- data.table(NHANES_full, keep.rownames = FALSE)
-gxS[, WTMEC2YR := NULL]
-head(gxS)
-
-gxS[gxS == "Refused"] <- NA
-gxS[gxS == "Don't know"] <- NA
-gxS[gxS == "Don't Know"] <- NA
-
-
-gxtS <- gxS %>% mutate(Education=recode(Education, "Less Than 9th Grade" = 1,
-                                        "9-11th Grade (Includes 12th grade with no diploma)" =2,
-                                        "High School Grad/GED or Equivalent" =3, 
-                                        "Some College or AA degree" =4, "College Graduate or above"=5,
-                                        "Refused"= 0, "Don't Know"=0))
-gxtS <- gxtS %>% mutate(Income=recode(Income, "$ 0 to $ 4,999"=1, "$ 5,000 to $ 9,999"=2,
-                                      "$10,000 to $14,999"=3, "$15,000 to $19,999"=4,
-                                      "$20,000 to $24,999"=5, "$25,000 to $34,999"=6,
-                                      "$35,000 to $44,999"=7, "$45,000 to $54,999"=8,
-                                      "$55,000 to $64,999"=9, "$65,000 to $74,999"=10,
-                                      "$75,000 and Over"=11, "Over $20,000"=8, "Under $20,000"=2.5,
-                                      "Refused"=0, "Don't know"=0, "$20,000 and Over"=9))
-
-gdmyS <- dummyVars(" ~ .", data = gxtS)
-NHANES_dummyS <- data.frame(predict(gdmyS, newdata = gxtS))
-dummyS <- NHANES_dummyS
-head(dummyS)
-ncol(dummyS)
-
-#Removing family history no, don't know and refused
-dummyS= dummyS[,-45:-47]
-#Removing smoking no, don't know, and refused
-dummyS= dummyS[,-34:-36]
-#removing all other instances of doctor told you have diabetes beyond the yes
-#column, X.Doctor.told.you.have.diabetes.Yes is a binary and should be all I need
-dummyS= dummyS[, -29:-32]
-#Removing HPB.Don.t.know and no 
-dummyS= dummyS[, -26:-27]
-#Removing Alcohol no and don't know
-dummyS= dummyS[,-23:-24]
-#Removing  Year, PSU, Stratum
-dummyS = dummyS[,-12:-21]
-#Removing female as reference category for gender
-dummyS= dummyS[,-3]
-head(dummyS)
-ncol(dummyS)
-
-dummyS$Q <- ifelse(dummyS$Diabetes >= "Yes", 1,0)
-dummyS$Q
-dummyS$Diabetes.Yes
-dummyS$Z <- ifelse(dummyS$BloodGlucose >=126, 1, 0)
-dummy$Z
-dummyS$Diabetes <- ifelse(dummyS$Q>=1 | dummyS$Z>=1, 1, 0)
-head(dummyS)
-ncol(dummyS)
-dummyS$Diabetes
-#removing Q and Z temp columns
-dummyS= dummyS[, -35:-36]
-#removing BloodGlucose column
-dummyS= dummyS[, -23]
-#removing Diabetes.Yes column
-dummyS= dummyS[, -13]
-head(dummyS)
-
-dummyAS <- dummyS %>% drop_na(Diabetes)
-head(dummyAS)
-nrow(dummyAS)
-nrow(dummyS)
-dummyBS <- drop_na(dummyAS)
-nrow(dummyBS)
-
-#splitting white and black datasets for complete cases
-NHANES_dmywhiteS <- dummyBS[dummyBS[, "Race.Non.Hispanic.White"] == 1,]
-head(NHANES_dmywhiteS)
-NHANES_dmyblackS <- dummyBS[dummyBS[, "Race.Non.Hispanic.Black"] == 1,]
-head(NHANES_dmyblackS)
-#removing other racial categories from black subset
-NHANES_dmyblackS= NHANES_dmyblackS[, -4:-8]
-head(NHANES_dmyblackS)
-#removing other racial categories from white subset
-NHANES_dmywhiteS= NHANES_dmywhiteS[, -4:-8]
-head(NHANES_dmywhiteS)
-ncol(NHANES_dmywhiteS)
-ncol(NHANES_dmyblackS)
-
-#Creating train and test sets for complete cases
-set.seed(13785)
-trainwhiteS <- createDataPartition(NHANES_dmywhiteS$Diabetes, p=.8, list=FALSE, times=1)
-trainS <- NHANES_dmywhiteS[trainwhiteS,]
-trainLS <- trainS
-testS <- NHANES_dmywhiteS[-trainwhiteS,]
-test2S <- NHANES_dmywhiteS[-trainwhiteS,]
-
-#design object to be called by suvey logistic procedure
-design.NHANES <- svydesign(id=~trainLS$SEQN, weights=~trainLS$surveyweight,
-                           data=trainLS, rescale = TRUE)
-
-#formmula for survey logistic function
-formulla3 <- Diabetes ~ Gender.Male + Age + Education + Income + Alcohol.Yes + HBP.Yes + Smoking.Yes + Weight + Height + Waist + Leg + BMI + Arm + ArmCircumference + FamilyHistory.Yes + Cholesterol + KcalIntake + Sodium + Carb + Fiber + Calcium + Caffeine + Pulse + Systolic + Diastolic
-colnames(design.NHANES)
-#suvery logistic
-svyglm(formulla3, design = design.NHANES, family = quasibinomial())
-surveylogistic <- svyglm(formulla3, design = design.NHANES, family = quasibinomial())
-
-#predictions
-probs2 <- predict(surveylogistic, newdata = test2S, type = "response")
-predSL <- ifelse(probs2 > 0.5, 1, 0)
-head(probs2)
-head(predSL)
-
-#testing the model against test data set
-confusionMatrix(factor(predSL), factor(test2S$Diabetes), positive = as.character(1))
-mean(predSL)
-mean(test2S$Diabetes)
-auc(test2S$Diabetes, predSL)
-
-#Standardization of ordinal and continuous per Dinh et al to see what effect it has on logistic
-#Standardizing training set
-head(trainLS)
-standard <- trainLS
-
-standard$Weight <- scale(standard$Weight)
-head(standard)
-standard$Age <- scale(standard$Age)
-standard$Education <- scale(standard$Education)
-standard$Income <- scale(standard$Income)
-standard$Height <- scale(standard$Height)
-standard$Waist <- scale(standard$Waist)
-standard$Leg <- scale(standard$Leg)
-standard$BMI <- scale(standard$BMI)
-standard$Arm <- scale(standard$Arm)
-standard$ArmCircumference <- scale(standard$ArmCircumference)
-standard$Cholesterol <- scale(standard$Cholesterol)
-standard$KcalIntake <- scale(standard$KcalIntake)
-standard$Sodium <- scale(standard$Sodium)
-standard$Carb <- scale(standard$Carb)
-standard$Fiber <- scale(standard$Fiber)
-standard$Calcium <- scale(standard$Calcium)
-standard$Caffeine <- scale(standard$Caffeine)
-standard$Pulse <- scale(standard$Pulse)
-standard$Systolic <- scale(standard$Systolic)
-standard$Diastolic <- scale(standard$Diastolic)
-head(standard)
-
-#Standardizing testing set
-StandardTest <- test2S
-
-StandardTest$Weight <- scale(StandardTest$Weight)
-head(StandardTest)
-StandardTest$Age <- scale(StandardTest$Age)
-StandardTest$Education <- scale(StandardTest$Education)
-StandardTest$Income <- scale(StandardTest$Income)
-StandardTest$Height <- scale(StandardTest$Height)
-StandardTest$Waist <- scale(StandardTest$Waist)
-StandardTest$Leg <- scale(StandardTest$Leg)
-StandardTest$BMI <- scale(StandardTest$BMI)
-StandardTest$Arm <- scale(StandardTest$Arm)
-StandardTest$ArmCircumference <- scale(StandardTest$ArmCircumference)
-StandardTest$Cholesterol <- scale(StandardTest$Cholesterol)
-StandardTest$KcalIntake <- scale(StandardTest$KcalIntake)
-StandardTest$Sodium <- scale(StandardTest$Sodium)
-StandardTest$Carb <- scale(StandardTest$Carb)
-StandardTest$Fiber <- scale(StandardTest$Fiber)
-StandardTest$Calcium <- scale(StandardTest$Calcium)
-StandardTest$Caffeine <- scale(StandardTest$Caffeine)
-StandardTest$Pulse <- scale(StandardTest$Pulse)
-StandardTest$Systolic <- scale(StandardTest$Systolic)
-StandardTest$Diastolic <- scale(StandardTest$Diastolic)
-head(StandardTest)
-
-#Survey logistic for standardized data
-design.Standard <- svydesign(id=~standard$SEQN, weights=~standard$surveyweight,
-                             data=standard, rescale = TRUE)
-
-formulla3 <- Diabetes ~ Gender.Male + Age + Education + Income + Alcohol.Yes + HBP.Yes + Smoking.Yes + Weight + Height + Waist + Leg + BMI + Arm + ArmCircumference + FamilyHistory.Yes + Cholesterol + KcalIntake + Sodium + Carb + Fiber + Calcium + Caffeine + Pulse + Systolic + Diastolic
-
-stdsurveylogistic <- svyglm(formulla3, design = design.Standard, family = quasibinomial())
-
-#predictions
-probsStandard <- predict(stdsurveylogistic, newdata = StandardTest, type = "response")
-predStandard <- ifelse(probs > 0.5, 1, 0)
-head(probsStandard)
-head(predStandard)
-
-#testing the model against test data set
-confusionMatrix(factor(predStandard), factor(StandardTest$Diabetes), positive = as.character(1))
-mean(predStandard)
-mean(StandardTest$Diabetes)
-auc(StandardTest$Diabetes, predStandard)
